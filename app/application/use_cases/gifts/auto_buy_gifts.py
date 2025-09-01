@@ -48,13 +48,20 @@ class AutoBuyGiftsForAllUsers:
         if not users_settings:
             logger.info(
                 "[UseCase:AutoBuyGifts] Нет пользователей с включенной автопокупкой")
+            await self.gift_repo.reset_new_gifts()
             return
 
         gifts = await self.gift_repo.get_new_gifts()
 
+        await self.gift_repo.reset_new_gifts()
+
         logger.info(
             f"[UseCase:AutoBuyGifts] Пользователей: {len(users_settings)}, новых подарков: {len(gifts)}"
         )
+
+        if not gifts:
+            logger.info("[UseCase:AutoBuyGifts] Нет новых подарков")
+            return
 
         async def process_user(user, settings):
             suitable = []
@@ -166,6 +173,5 @@ class AutoBuyGiftsForAllUsers:
         await asyncio.gather(
             *(process_user(user, settings) for user, settings in users_settings)
         )
-        await self.gift_repo.reset_new_gifts()
         elapsed = time.monotonic() - start_time
         logger.info(f"[UseCase:AutoBuyGifts] Завершено за {elapsed:.2f} сек")
