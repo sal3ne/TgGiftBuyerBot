@@ -13,9 +13,16 @@ class Base(DeclarativeBase):
     pass
 
 
-# Объявляем переменные, но НЕ инициализируем
+# Объявляем переменные глобально
 async_engine: AsyncEngine = None
 AsyncSessionLocal: async_sessionmaker[AsyncSession] = None
+
+
+def get_async_session_maker():
+    """Возвращает sessionmaker (для использования в get_db)"""
+    if AsyncSessionLocal is None:
+        raise RuntimeError("Database not initialized. Call init_db() first.")
+    return AsyncSessionLocal
 
 
 async def init_db():

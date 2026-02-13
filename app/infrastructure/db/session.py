@@ -3,12 +3,15 @@ from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .database import AsyncSessionLocal
+from . import database  # Импортируем модуль, а не переменную
 
 
 @asynccontextmanager
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    async with AsyncSessionLocal() as session:
+    if database.AsyncSessionLocal is None:
+        raise RuntimeError("Database not initialized. Call init_db() first.")
+    
+    async with database.AsyncSessionLocal() as session:
         try:
             yield session
             await session.commit()
