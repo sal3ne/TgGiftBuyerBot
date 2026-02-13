@@ -3,11 +3,10 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramForbiddenError
-from sqlalchemy import create_engine
 
 from app.core.config import settings
 from app.core.logger import logger
-from app.infrastructure.db.database import Base
+from app.infrastructure.db.database import init_db, close_db
 from app.infrastructure.scheduler.jobs import schedule_sync_job
 from app.interfaces.telegram.handlers import register_handlers
 from app.interfaces.telegram.middlewares.private_chat_only import (
@@ -40,21 +39,11 @@ async def errors_handler(update, exception):
     logger.error(f"Unhandled exception: {exception}")
 
 
-# Закомментировать если используете не sqlite / Comment if using another db not sqlite
-# + нужно использовать alembic для миграций / + need use alembic for migrations
-def init_db():
-    url = settings.database_url.replace("+aiosqlite", "")
-    engine = create_engine(url)
-    Base.metadata.create_all(engine)
-
-
 @logger.catch
 async def on_startup():
-    # Закомментировать если используете не sqlite / Comment if using another db not sqlite
     logger.info("Initializing database...")
-    init_db()
+    await init_db()  # Используем async версию
     logger.info("Database initialized successfully")
-    # ////////////////////////////////////////////////////////////////////////////////////
 
     logger.info("Starting scheduler...")
     schedule_sync_job(bot)
@@ -68,4 +57,7 @@ async def main():
 
     register_handlers(dp)
 
-    await dp.start_polling(bot)
+    try:
+        await dp.start_polling(bot)
+    finally:
+        await close_db()
